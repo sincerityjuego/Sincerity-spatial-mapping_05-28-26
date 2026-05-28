@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GeoVision – Spatial Infrastructure Mapping</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ HEADER -->
+<header id="top-bar">
+  <div id="logo-wrap">
+    <svg id="logo-svg" viewBox="0 0 260 48" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#6b21e8"/>
+          <stop offset="100%" style="stop-color:#60a5fa"/>
+        </linearGradient>
+        <linearGradient id="eyeOuter" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#a3e635"/>
+          <stop offset="100%" style="stop-color:#22d3ee"/>
+        </linearGradient>
+        <linearGradient id="eyeInner" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#6b21e8"/>
+          <stop offset="100%" style="stop-color:#818cf8"/>
+        </linearGradient>
+      </defs>
+      <text x="4" y="36" font-family="Orbitron,sans-serif" font-weight="900" font-size="28" fill="url(#textGrad)" letter-spacing="2">GEOVISION</text>
+      <!-- tiny dot accents -->
+      <circle cx="8"   cy="6" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="28"  cy="5" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="52"  cy="6" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="76"  cy="5" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="100" cy="6" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="124" cy="5" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="148" cy="6" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="172" cy="5" r="1.2" fill="white" opacity="0.8"/>
+      <circle cx="196" cy="6" r="1.2" fill="white" opacity="0.8"/>
+      <!-- eye shape -->
+      <ellipse cx="240" cy="24" rx="16" ry="10" fill="url(#eyeOuter)" opacity="0.9"/>
+      <circle  cx="240" cy="24" r="6"  fill="url(#eyeInner)"/>
+      <circle  cx="240" cy="24" r="2.5" fill="black" opacity="0.8"/>
+      <circle  cx="237" cy="21" r="1"  fill="white" opacity="0.7"/>
+    </svg>
+  </div>
+
+  <div id="search-wrap">
+    <i class="fa fa-search"></i>
+    <input type="text" id="search-input" placeholder="Search barangay, city, landmark in Camarines Norte…"/>
+    <button id="search-btn">GO</button>
+  </div>
+
+  <div id="top-controls">
+    <button class="ctrl-btn" id="btn-2d" title="2D Map">2D</button>
+    <button class="ctrl-btn active" id="btn-3d" title="3D / OSM Buildings">3D</button>
+    <button class="ctrl-btn" id="btn-satellite" title="Satellite View"><i class="fa fa-satellite"></i></button>
+    <button class="ctrl-btn" id="btn-street" title="Street View"><i class="fa fa-street-view"></i></button>
+    <button class="ctrl-btn" id="btn-layers" title="Layers"><i class="fa fa-layer-group"></i></button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════ LAYOUT -->
+<div id="app-layout">
+
+  <!-- ══════════════════════════════════════ LEFT PANEL -->
+  <aside id="left-panel">
+    <div id="panel-header">
+      <span>📍 Location Info</span>
+      <button id="collapse-left" title="Collapse"><i class="fa fa-chevron-left"></i></button>
+    </div>
+
+    <!-- Hazard Legend -->
+    <div class="panel-section" id="hazard-legend">
+      <div class="section-title"><i class="fa fa-triangle-exclamation"></i> Hazard Levels</div>
+      <div class="legend-row"><span class="dot red"></span> High Risk</div>
+      <div class="legend-row"><span class="dot orange"></span> Moderate Risk</div>
+      <div class="legend-row"><span class="dot yellow"></span> Low Risk</div>
+      <div class="legend-row"><span class="dot green"></span> Safe Zone</div>
+    </div>
+
+    <!-- Layer Toggles -->
+    <div class="panel-section" id="layer-toggles">
+      <div class="section-title"><i class="fa fa-layer-group"></i> Map Layers</div>
+      <label class="toggle-row"><input type="checkbox" id="lyr-flood" checked/> Flood Zones</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-landslide" checked/> Landslide Areas</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-seismic" checked/> Seismic Risk</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-storm" checked/> Storm Surge</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-volcano"/> Active Volcanoes</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-infra"/> Infrastructure</label>
+      <label class="toggle-row"><input type="checkbox" id="lyr-population"/> Population Density</label>
+    </div>
+
+    <!-- Location Info Card -->
+    <div class="panel-section" id="location-card">
+      <div class="section-title"><i class="fa fa-circle-info"></i> Selected Area</div>
+      <div id="loc-name">Click on the map to explore</div>
+      <div id="loc-details" class="hidden">
+        <div class="loc-row"><i class="fa fa-people-group"></i><span id="loc-pop">—</span></div>
+        <div class="loc-row"><i class="fa fa-water"></i><span id="loc-flood">—</span></div>
+        <div class="loc-row"><i class="fa fa-mountain"></i><span id="loc-land">—</span></div>
+        <div class="loc-row"><i class="fa fa-house-crack"></i><span id="loc-seismic">—</span></div>
+        <div class="loc-row"><i class="fa fa-volcano"></i><span id="loc-volc">—</span></div>
+        <div id="loc-photos-wrap">
+          <div class="section-title" style="margin-top:10px"><i class="fa fa-images"></i> Photos</div>
+          <div id="loc-photos"></div>
+          <label class="upload-btn"><i class="fa fa-upload"></i> Add Photo
+            <input type="file" id="photo-upload" accept="image/*" multiple hidden/>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Volcano Monitor -->
+    <div class="panel-section" id="volcano-monitor">
+      <div class="section-title"><i class="fa fa-volcano"></i> Volcano Monitor (PHIVOLCS)</div>
+      <div id="volcano-list">Loading…</div>
+    </div>
+
+    <!-- Weather -->
+    <div class="panel-section" id="weather-panel">
+      <div class="section-title"><i class="fa fa-cloud-sun"></i> Weather – Daet</div>
+      <div id="weather-info">Fetching…</div>
+    </div>
+
+  </aside>
+
+  <!-- ══════════════════════════════════════ MAP -->
+  <main id="map-wrap">
+    <div id="map"></div>
+
+    <!-- Hazard overlay status bar -->
+    <div id="status-bar">
+      <span class="dot red"></span><span>Danger</span>
+      <span class="dot orange"></span><span>Moderate</span>
+      <span class="dot green"></span><span>Safe</span>
+      <span id="coords-display">Lat: — | Lng: —</span>
+    </div>
+
+    <!-- 3D building toggle float -->
+    <div id="map-fab-group">
+      <button class="fab" id="fab-3d" title="Toggle 3D Buildings"><i class="fa fa-cube"></i></button>
+      <button class="fab" id="fab-fullai" title="Full Screen AI"><i class="fa fa-robot"></i></button>
+      <button class="fab" id="fab-locate" title="My Location"><i class="fa fa-location-crosshairs"></i></button>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════ RIGHT PANEL (AI VISION) -->
+  <aside id="right-panel">
+    <div id="ai-header">
+      <div id="ai-title">
+        <span class="ai-eye">👁</span>
+        <span>AI VISION</span>
+      </div>
+      <button id="ai-fullscreen-btn" title="Full Screen"><i class="fa fa-expand"></i></button>
+    </div>
+
+    <!-- Risk Score card -->
+    <div class="panel-section" id="risk-score-section">
+      <div class="section-title">Risk Score</div>
+      <div id="risk-gauge-wrap">
+        <svg id="risk-gauge" viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10,60 A50,50 0 0,1 110,60" stroke="#1e293b" stroke-width="10" fill="none"/>
+          <path id="gauge-arc" d="M10,60 A50,50 0 0,1 110,60" stroke="#22d3ee" stroke-width="10" fill="none"
+                stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset 1s ease"/>
+          <text x="60" y="58" text-anchor="middle" fill="#e2e8f0" font-size="18" font-family="Orbitron">—</text>
+          <text x="60" y="70" text-anchor="middle" fill="#94a3b8" font-size="7" font-family="Rajdhani">RISK INDEX</text>
+        </svg>
+      </div>
+      <div id="risk-bars">
+        <div class="rbar-row"><span>Flood</span><div class="rbar"><div class="rbar-fill" id="rb-flood" style="width:0%"></div></div></div>
+        <div class="rbar-row"><span>Landslide</span><div class="rbar"><div class="rbar-fill" id="rb-land" style="width:0%"></div></div></div>
+        <div class="rbar-row"><span>Seismic</span><div class="rbar"><div class="rbar-fill" id="rb-seismic" style="width:0%"></div></div></div>
+        <div class="rbar-row"><span>Storm</span><div class="rbar"><div class="rbar-fill" id="rb-storm" style="width:0%"></div></div></div>
+      </div>
+    </div>
+
+    <!-- AI Chat -->
+    <div id="ai-chat-section">
+      <div id="chat-messages">
+        <div class="msg ai-msg">
+          <span class="msg-avatar">👁</span>
+          <div class="msg-bubble">Hi, I am <strong>AI VISION</strong>. What would you like to know about Camarines Norte?</div>
+        </div>
+      </div>
+      <div id="chat-input-row">
+        <label for="chat-img-upload" class="img-upload-btn" title="Upload image"><i class="fa fa-image"></i>
+          <input type="file" id="chat-img-upload" accept="image/*" hidden/>
+        </label>
+        <input type="text" id="chat-input" placeholder="Ask about any location, hazard, solution…"/>
+        <button id="chat-send"><i class="fa fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </aside>
+
+</div><!-- end app-layout -->
+
+<!-- ═══════════════════════════════════════════ FULLSCREEN AI MODAL -->
+<div id="ai-fullscreen-modal" class="hidden">
+  <div id="ai-modal-inner">
+    <div id="ai-modal-header">
+      <div id="ai-title" style="font-size:1.4rem">
+        <span class="ai-eye">👁</span> AI VISION – Full Screen
+      </div>
+      <button id="ai-close-fullscreen"><i class="fa fa-compress"></i> Exit</button>
+    </div>
+    <div id="ai-modal-messages"></div>
+    <div id="ai-modal-input-row">
+      <label for="ai-modal-img" class="img-upload-btn"><i class="fa fa-image"></i>
+        <input type="file" id="ai-modal-img" accept="image/*" hidden/>
+      </label>
+      <input type="text" id="ai-modal-input" placeholder="Ask anything about Camarines Norte infrastructure, hazards, solutions…"/>
+      <button id="ai-modal-send"><i class="fa fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ CLICK ANALYSIS MODAL -->
+<div id="analysis-modal" class="hidden">
+  <div id="analysis-inner">
+    <button id="analysis-close"><i class="fa fa-xmark"></i></button>
+    <div id="analysis-content">
+      <div class="analysis-loading"><i class="fa fa-spinner fa-spin"></i> AI VISION is analyzing this location…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-osm-buildings/dist/OSMBuildings-Leaflet.js" onerror="console.warn('OSM Buildings not loaded')"></script>
+<script src="main.js"></script>
+</body>
+</html>
